@@ -38,8 +38,8 @@ namespace QuickRestClient
 
         public RestClientsFactory(HttpClient client, Uri host)
         {
-            this.client = client;
-            this.host = host;
+            this.client = client ?? throw new ArgumentNullException(nameof(client));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
         }
 
         public T CreateClient<T>()
@@ -52,16 +52,25 @@ namespace QuickRestClient
                     "Contract type must be an interface.", nameof(T));
             }
 
-            var allMethods = contractType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+            Type clientClass = CreateInterfaceImplementation(contractType);
+            return CreateClientInstance<T>(clientClass);
+        }
 
-            var assemblyName = new AssemblyName(contractType.FullName);
-            var moduleName = $"{assemblyName}.dll";
+        private T CreateClientInstance<T>(Type createdType) where T : class
+        {
+            var client = (RestClientBase)Activator.CreateInstance(createdType, new object[0]);
+            client.Client = this.client;
+            client.Host = this.host;
+
+            return client as T;
+        }
+
+        private static Type CreateInterfaceImplementation(Type contractType)
+        {
+            ModuleBuilder module = GetModuleForCustomType(contractType);
+
             var namesapce = contractType.Namespace;
             var typeName = $"{namesapce}.{contractType.Name}Impl";
-
-            var assembly = AssemblyBuilder.DefineDynamicAssembly(
-                assemblyName, AssemblyBuilderAccess.RunAndCollect);
-            var module = assembly.DefineDynamicModule(moduleName);
             var type = module.DefineType(typeName,
                 TypeAttributes.Class
                 | TypeAttributes.AnsiClass
@@ -71,6 +80,11 @@ namespace QuickRestClient
             type.AddInterfaceImplementation(contractType);
 
             type.DefineDefaultConstructor(MethodAttributes.Public);
+
+            var allMethods = contractType.GetMethods(
+                BindingFlags.Instance 
+                | BindingFlags.Public 
+                | BindingFlags.FlattenHierarchy);
 
             foreach (var method in allMethods)
             {
@@ -82,7 +96,7 @@ namespace QuickRestClient
                     var parameters = method.GetParameters().Select(p => p.ParameterType).ToArray();
                     var endpointPath = endpointAttribute.RelativePath;
                     var methodImpl = type.DefineMethod(
-                        methodName, 
+                        methodName,
                         MethodAttributes.Public | MethodAttributes.Virtual, returnType, parameters);
                     var realImplementation = typeof(RestClientBase)
                         .GetMethod(nameof(RestClientBase.GetResponseString), BindingFlags.Instance | BindingFlags.NonPublic);
@@ -98,11 +112,17 @@ namespace QuickRestClient
             }
 
             var createdType = type.CreateType();
-            var client = (RestClientBase)Activator.CreateInstance(createdType, new object[0]);
-            client.Client = this.client;
-            client.Host = this.host;
+            return createdType;
+        }
 
-            return client as T;
+        private static ModuleBuilder GetModuleForCustomType(Type contractType)
+        {
+            var assemblyName = new AssemblyName(contractType.FullName);
+            var moduleName = $"{assemblyName}.dll";
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(
+                assemblyName, AssemblyBuilderAccess.RunAndCollect);
+            var module = assembly.DefineDynamicModule(moduleName);
+            return module;
         }
     }
 
