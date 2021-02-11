@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace QuickRestClient.Test
 {
@@ -14,7 +15,7 @@ namespace QuickRestClient.Test
             const string host = "https://jsonplaceholder.typicode.com/";
             RestClientsFactory clientsFactory = new RestClientsFactory(client, new Uri(host));
             IUsersService usersService = clientsFactory.CreateClient<IUsersService>();
-            string response = usersService.GetUsers();
+            string response = usersService.GetUsersString();
             Console.Write(response);
             //var users = usersService.GetUsers();
             
@@ -28,6 +29,24 @@ namespace QuickRestClient.Test
     public interface IUsersService
     {
         [Endpoint("users")]
-        public string GetUsers();
+        public string GetUsersString();
+
+        [Endpoint("users")]
+        public HttpResponseMessage GetUsersResponse();
+
+        [Endpoint("users")]
+        public IEnumerable<User> GetUsers();
+
+        [Endpoint("users/{id}")]
+        public User GetUser(int id);
+
+        [Endpoint("users/{id}")]
+        public Task<User> GetUserAsync(int id);
+
+        [Endpoint("users/{id}")]
+        public void DeleteUser(int id);
+
+        [Endpoint("users")]
+        public void CreateUser(User user);
     }
 }
