@@ -6,29 +6,6 @@ using System.Reflection.Emit;
 
 namespace QuickRestClient
 {
-    public abstract class RestClientBase
-    {
-        internal HttpClient Client;
-
-        protected internal string GetResponseString(string requestString)
-        {
-            bool correctUri = Uri.TryCreate(
-                requestString, UriKind.RelativeOrAbsolute, out Uri requestUri);
-            if (!correctUri)
-            {
-                throw new ArgumentException(nameof(requestString));
-            }
-
-            var response = Client.GetAsync(requestUri).Result;
-            if (response.IsSuccessStatusCode)
-            {
-                return response.Content.ReadAsStringAsync().Result;
-            }
-
-            return null;
-        }
-    }
-
     public class RestClientsFactory
     {
         private readonly HttpClient client;
@@ -105,18 +82,46 @@ namespace QuickRestClient
 
             MethodBuilder methodImpl = AddInterfaceMethodToClientClass(method, type);
 
-
-
-            var realImplementation = typeof(RestClientBase)
-                .GetMethod(nameof(RestClientBase.GetResponseString),
-                    BindingFlags.Instance | BindingFlags.NonPublic);
+            var getResponseMethod = FindMethodInClientBase(nameof(RestClientBase.GetResponse));
 
             var endpointPath = endpointAttribute.RelativePath;
+
             var il = methodImpl.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldstr, endpointPath);
-            il.Emit(OpCodes.Call, realImplementation);
-            il.Emit(OpCodes.Ret);
+            if (method.ReturnType == typeof(void))
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.Emit(OpCodes.Call, getResponseMethod);
+                il.Emit(OpCodes.Pop);
+                il.Emit(OpCodes.Ret);
+            }
+            else if (method.ReturnType == typeof(string))
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.Emit(OpCodes.Call, getResponseMethod);
+                il.Emit(OpCodes.Call, FindMethodInClientBase(nameof(RestClientBase.ReturnRawStringResponse)));
+                il.Emit(OpCodes.Ret);
+            }
+            else if (method.ReturnType == typeof(HttpResponseMessage))
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.Emit(OpCodes.Call, getResponseMethod);
+                il.Emit(OpCodes.Ret);
+            }
+            else
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.Emit(OpCodes.Call, getResponseMethod);
+                il.Emit(OpCodes.Call, 
+                    FindMethodInClientBase(nameof(RestClientBase.ReturnParsedObject))
+                    .MakeGenericMethod(method.ReturnType));
+                il.Emit(OpCodes.Ret);
+            }
         }
 
         private static MethodBuilder AddInterfaceMethodToClientClass(MethodInfo method, TypeBuilder type)
@@ -126,6 +131,12 @@ namespace QuickRestClient
                 MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, parameters);
             type.DefineMethodOverride(methodImpl, method);
             return methodImpl;
+        }
+
+        private static MethodInfo FindMethodInClientBase(string name)
+        {
+            return typeof(RestClientBase)
+                .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
         private ModuleBuilder GetModuleForCustomTypes()
