@@ -10,17 +10,16 @@ namespace QuickRestClient
     {
         internal HttpClient Client;
 
-        internal Uri Host;
-
-        protected internal string GetResponseString(string relativeUri)
+        protected internal string GetResponseString(string requestString)
         {
-            bool correctUri = Uri.TryCreate(Host, relativeUri, out Uri absoluteUri);
+            bool correctUri = Uri.TryCreate(
+                requestString, UriKind.RelativeOrAbsolute, out Uri requestUri);
             if (!correctUri)
             {
-                throw new ArgumentException(nameof(relativeUri));
+                throw new ArgumentException(nameof(requestString));
             }
 
-            var response = Client.GetAsync(absoluteUri).Result;
+            var response = Client.GetAsync(requestUri).Result;
             if (response.IsSuccessStatusCode)
             {
                 return response.Content.ReadAsStringAsync().Result;
@@ -34,16 +33,13 @@ namespace QuickRestClient
     {
         private readonly HttpClient client;
 
-        private readonly Uri host;
-
         private ModuleBuilder moduleBuilder;
 
         private readonly object monitor = new object();
 
-        public RestClientsFactory(HttpClient client, Uri host)
+        public RestClientsFactory(HttpClient client)
         {
             this.client = client ?? throw new ArgumentNullException(nameof(client));
-            this.host = host ?? throw new ArgumentNullException(nameof(host));
         }
 
         public TContract CreateClient<TContract>()
@@ -59,7 +55,6 @@ namespace QuickRestClient
             Type clientClass = CreateClientClass(contractType);
             return CreateClientInstance<TContract>(clientClass);
         }
-
 
         private Type CreateClientClass(Type contractType)
         {
@@ -84,9 +79,9 @@ namespace QuickRestClient
             return type;
         }
 
-        private static void ImplementContractByClientClass(Type contractType, TypeBuilder type)
+        private static void ImplementContractByClientClass(Type contractType, TypeBuilder clientClass)
         {
-            type.AddInterfaceImplementation(contractType);
+            clientClass.AddInterfaceImplementation(contractType);
 
             var allMethods = contractType.GetMethods(
                 BindingFlags.Instance
@@ -95,33 +90,42 @@ namespace QuickRestClient
 
             foreach (var method in allMethods)
             {
-                ImplementMethodByClientClass(method, type);
+                ImplementMethodByClientClass(method, clientClass);
             }
         }
 
         private static void ImplementMethodByClientClass(MethodInfo method, TypeBuilder type)
         {
             var endpointAttribute = method.GetCustomAttribute<EndpointAttribute>(true);
-            if (endpointAttribute != null)
+            if (endpointAttribute == null)
             {
-                var methodName = method.Name;
-                var returnType = method.ReturnType;
-                var parameters = method.GetParameters().Select(p => p.ParameterType).ToArray();
-                var endpointPath = endpointAttribute.RelativePath;
-                var methodImpl = type.DefineMethod(
-                    methodName,
-                    MethodAttributes.Public | MethodAttributes.Virtual, returnType, parameters);
-                var realImplementation = typeof(RestClientBase)
-                    .GetMethod(nameof(RestClientBase.GetResponseString), BindingFlags.Instance | BindingFlags.NonPublic);
-
-                var il = methodImpl.GetILGenerator();
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, endpointPath);
-                il.Emit(OpCodes.Call, realImplementation);
-                il.Emit(OpCodes.Ret);
-
-                type.DefineMethodOverride(methodImpl, method);
+                throw new InvalidOperationException(
+                    $"Method '{method}' has no {nameof(EndpointAttribute)}.");
             }
+
+            MethodBuilder methodImpl = AddInterfaceMethodToClientClass(method, type);
+
+
+
+            var realImplementation = typeof(RestClientBase)
+                .GetMethod(nameof(RestClientBase.GetResponseString),
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+
+            var endpointPath = endpointAttribute.RelativePath;
+            var il = methodImpl.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldstr, endpointPath);
+            il.Emit(OpCodes.Call, realImplementation);
+            il.Emit(OpCodes.Ret);
+        }
+
+        private static MethodBuilder AddInterfaceMethodToClientClass(MethodInfo method, TypeBuilder type)
+        {
+            var parameters = method.GetParameters().Select(p => p.ParameterType).ToArray();
+            var methodImpl = type.DefineMethod(method.Name,
+                MethodAttributes.Public | MethodAttributes.Virtual, method.ReturnType, parameters);
+            type.DefineMethodOverride(methodImpl, method);
+            return methodImpl;
         }
 
         private ModuleBuilder GetModuleForCustomTypes()
@@ -146,7 +150,6 @@ namespace QuickRestClient
         {
             var client = (RestClientBase)Activator.CreateInstance(createdType, new object[0]);
             client.Client = this.client;
-            client.Host = this.host;
 
             return client as T;
         }
