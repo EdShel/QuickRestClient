@@ -9,7 +9,7 @@ using System.Net.Http;
 namespace QuickRestClient.Test
 {
     [TestFixture]
-    public class UserEndpointsTest
+    public class ReturnTypesTest
     {
         private RestClientsFactory clientsFactory;
 
@@ -92,6 +92,19 @@ namespace QuickRestClient.Test
         {
             [Endpoint("users")]
             public IEnumerable<User> GetUsers();
+        }
+
+        [Test]
+        public void GetUsers_WrongReturnType()
+        {
+            var client = clientsFactory.CreateClient<IUsersService_WrongReturnType>();
+            Assert.Throws<InvalidOperationException>(() => client.GetUsers());
+        }
+
+        public interface IUsersService_WrongReturnType
+        {
+            [Endpoint("users")]
+            public User GetUsers();
         }
     }
 

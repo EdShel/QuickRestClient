@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Net.Http;
 
@@ -37,7 +36,16 @@ namespace QuickRestClient
                 return default;
             }
             var jsonString = response.Content.ReadAsStringAsync().Result;
-            return JsonConvert.DeserializeObject<T>(jsonString);
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(jsonString);
+            }
+            catch (JsonSerializationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Can't parse response string to the type {typeof(T).FullName}. " +
+                    $"See inner exception for more details.", ex);
+            }
         }
     }
 }

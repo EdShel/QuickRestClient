@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QuickRestClient.ILGeneration;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -90,7 +91,7 @@ namespace QuickRestClient
             if (method.ReturnType == typeof(void))
             {
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.EmitUrlString(endpointPath, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Pop);
                 il.Emit(OpCodes.Ret);
@@ -99,7 +100,7 @@ namespace QuickRestClient
             {
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.EmitUrlString(endpointPath, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Call, FindMethodInClientBase(nameof(RestClientBase.ReturnRawStringResponse)));
                 il.Emit(OpCodes.Ret);
@@ -107,7 +108,7 @@ namespace QuickRestClient
             else if (method.ReturnType == typeof(HttpResponseMessage))
             {
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.EmitUrlString(endpointPath, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Ret);
             }
@@ -115,7 +116,7 @@ namespace QuickRestClient
             {
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldstr, endpointPath);
+                il.EmitUrlString(endpointPath, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Call, 
                     FindMethodInClientBase(nameof(RestClientBase.ReturnParsedObject))
