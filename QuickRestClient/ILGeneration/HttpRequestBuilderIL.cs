@@ -23,7 +23,7 @@ namespace QuickRestClient.ILGeneration
             }
 
             ParameterInfo[] orderOfSubstitution = GetMethodParamsForUrlInSubstitutionOrder(parameters, parametersInUrl);
-            string formatString = GetUrlFormatString(urlTemplate, orderOfSubstitution.Select(p => p.Name));
+            string formatString = GetUrlFormatString(urlTemplate, parametersInUrl.Select(p => p.Value));
 
             ParameterInfo[] unusedParams = parameters.Except(orderOfSubstitution).ToArray();
             ParameterInfo contentParameter = unusedParams.FirstOrDefault();
@@ -81,29 +81,23 @@ namespace QuickRestClient.ILGeneration
             var urlParamNames = paramsOfUrl.Select(p => p.Groups[1].Value);
             var methodParamNames = allMethodParams.Select(p => p.Name);
 
-            ParameterInfo[] orderOfSubstitution;
             bool methodHasAllUrlParams = urlParamNames.All(p => methodParamNames.Contains(p));
             if (methodHasAllUrlParams)
             {
-                orderOfSubstitution = paramsOfUrl
+                return paramsOfUrl
                     .Select(urlParam => allMethodParams.First(methodParam => methodParam.Name == urlParam.Groups[1].Value))
                     .ToArray();
             }
-            else
-            {
-                orderOfSubstitution = allMethodParams.Take(paramsOfUrl.Count).ToArray();
-            }
-
-            return orderOfSubstitution;
+            return allMethodParams.Take(paramsOfUrl.Count).ToArray();
         }
 
-        private static string GetUrlFormatString(string urlTemplate, IEnumerable<string> orderOfParams)
+        private static string GetUrlFormatString(string urlTemplate, IEnumerable<string> urlParameters)
         {
             var formatStringBuilder = new StringBuilder(urlTemplate);
             int i = 0;
-            foreach (var parameterInUrl in orderOfParams)
+            foreach (var parameterInUrl in urlParameters)
             {
-                formatStringBuilder.Replace($"{{{parameterInUrl}}}", $"{{{i}}}");
+                formatStringBuilder.Replace(parameterInUrl, $"{{{i}}}");
                 i++;
             }
             return formatStringBuilder.ToString();

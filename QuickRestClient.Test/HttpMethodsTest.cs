@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using QuickRestClient.Test.Models;
+using QuickRestClient.Test.Models.Posts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,6 +58,19 @@ namespace QuickRestClient.Test
         {
             [Endpoint("posts", HttpMethod = EndpointHttpMethod.Post)]
             public Post CreatePost(PostCreate newPost);
+        }
+
+        [Test]
+        public void GetPost_SpecifyContentInGetMethod()
+        {
+            Assert.Throws<InvalidOperationException>(
+                ()=> clientsFactory.CreateClient<IPostService_SpecifyContentInGetMethod>());
+        }
+
+        public interface IPostService_SpecifyContentInGetMethod
+        {
+            [Endpoint("posts", HttpMethod = EndpointHttpMethod.Get)]
+            public IEnumerable<Post> GetAllPosts(object unnecessaryContentParameter);
         }
     }
 }

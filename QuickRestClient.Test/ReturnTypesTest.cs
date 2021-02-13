@@ -1,5 +1,5 @@
 ﻿using NUnit.Framework;
-using QuickRestClient.Test.Models;
+using QuickRestClient.Test.Models.Users;
 using System;
 using System.Collections.Generic;
 using System.Linq;
