@@ -107,28 +107,4 @@ namespace QuickRestClient.Test
             public User GetUsers();
         }
     }
-
-    //public interface IUsersService
-    //{
-    //    [Endpoint("users")]
-    //    public string GetUsersString();
-
-    //    [Endpoint("users")]
-    //    public HttpResponseMessage GetUsersResponse();
-
-    //    [Endpoint("users")]
-    //    public IEnumerable<User> GetUsers();
-
-    //    [Endpoint("users/{id}")]
-    //    public User GetUser(int id);
-
-    //    [Endpoint("users/{id}")]
-    //    public Task<User> GetUserAsync(int id);
-
-    //    [Endpoint("users/{id}")]
-    //    public void DeleteUser(int id);
-
-    //    [Endpoint("users")]
-    //    public void CreateUser(User user);
-    //}
 }

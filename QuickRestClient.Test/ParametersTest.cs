@@ -5,6 +5,7 @@ using System.Net.Http;
 
 namespace QuickRestClient.Test
 {
+
     [TestFixture]
     public class ParametersTest
     {

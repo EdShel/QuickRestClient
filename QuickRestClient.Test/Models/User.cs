@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace QuickRestClient.Test.Models
+﻿namespace QuickRestClient.Test.Models
 {
     public class User
     {
