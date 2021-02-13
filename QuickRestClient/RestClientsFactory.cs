@@ -85,13 +85,11 @@ namespace QuickRestClient
 
             var getResponseMethod = FindMethodInClientBase(nameof(RestClientBase.GetResponse));
 
-            var endpointPath = endpointAttribute.RelativePath;
-
             var il = methodImpl.GetILGenerator();
             if (method.ReturnType == typeof(void))
             {
                 il.Emit(OpCodes.Ldarg_0);
-                il.EmitUrlString(endpointPath, method.GetParameters());
+                il.EmitHttpRequest(endpointAttribute, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Pop);
                 il.Emit(OpCodes.Ret);
@@ -100,7 +98,7 @@ namespace QuickRestClient
             {
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_0);
-                il.EmitUrlString(endpointPath, method.GetParameters());
+                il.EmitHttpRequest(endpointAttribute, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Call, FindMethodInClientBase(nameof(RestClientBase.ReturnRawStringResponse)));
                 il.Emit(OpCodes.Ret);
@@ -108,7 +106,7 @@ namespace QuickRestClient
             else if (method.ReturnType == typeof(HttpResponseMessage))
             {
                 il.Emit(OpCodes.Ldarg_0);
-                il.EmitUrlString(endpointPath, method.GetParameters());
+                il.EmitHttpRequest(endpointAttribute, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Ret);
             }
@@ -116,7 +114,7 @@ namespace QuickRestClient
             {
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_0);
-                il.EmitUrlString(endpointPath, method.GetParameters());
+                il.EmitHttpRequest(endpointAttribute, method.GetParameters());
                 il.Emit(OpCodes.Call, getResponseMethod);
                 il.Emit(OpCodes.Call, 
                     FindMethodInClientBase(nameof(RestClientBase.ReturnParsedObject))

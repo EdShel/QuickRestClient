@@ -28,7 +28,7 @@ namespace QuickRestClient.Test
             var posts = client.GetAllPosts();
             Assert.NotNull(posts);
             Assert.AreEqual(100, posts.Count());
-            Assert.AreEqual(3, posts.ElementAt(3).Id);
+            Assert.AreEqual(3, posts.ElementAt(2).Id);
         }
 
         public interface IPostService_GetHttpMethod

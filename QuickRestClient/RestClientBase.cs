@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Net.Http;
+using System.Net.Mime;
+using System.Text;
 
 namespace QuickRestClient
 {
@@ -8,16 +10,15 @@ namespace QuickRestClient
     {
         internal HttpClient Client;
 
-        protected internal HttpResponseMessage GetResponse(string requestString)
+        protected internal HttpContent CreateRequestBody(object content)
         {
-            bool correctUri = Uri.TryCreate(
-                requestString, UriKind.RelativeOrAbsolute, out Uri requestUri);
-            if (!correctUri)
-            {
-                throw new ArgumentException(nameof(requestString));
-            }
+            var json = JsonConvert.SerializeObject(content);
+            return new StringContent(json, Encoding.UTF8, MediaTypeNames.Application.Json);
+        }
 
-            return Client.GetAsync(requestUri).Result;
+        protected internal HttpResponseMessage GetResponse(HttpRequestMessage request)
+        {
+            return Client.SendAsync(request).Result;
         }
 
         protected internal string ReturnRawStringResponse(HttpResponseMessage response)
